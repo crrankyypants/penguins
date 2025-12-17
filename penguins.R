@@ -36,9 +36,15 @@ island_mass <- penguins_clean %>% group_by(island) %>% summarize(mean_mass=mean(
 
 penguins_clean %>% group_by(year, species) %>% summarize(mean_mass=mean(body_mass_g, na.rm=TRUE),n=n())
 
+# how do the penguins species vary by size
+penguins_clean %>% group_by(species) %>% summarize(mean_flipper=mean(flipper_length_mm, na.rm=TRUE), n=n())
+penguins_clean %>% group_by(species) %>% summarize(mean_flipper=mean(bill_length_mm, na.rm=TRUE), n=n())
+penguins_clean %>% group_by(species) %>% summarize(mean_flipper=mean(bill_depth_mm, na.rm=TRUE), n=n())
 
-
-
+ggplot(penguins_clean, aes(x=species, y=body_mass_g)) + 
+  geom_jitter(col="darkgreen", width=.2, alpha=.6) + 
+  labs(x="Species", y="Body Mass", title="Body Mass of Species of Penguins") + theme_classic()
+  
 
 
 
