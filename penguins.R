@@ -41,10 +41,34 @@ penguins_clean %>% group_by(species) %>% summarize(mean_flipper=mean(flipper_len
 penguins_clean %>% group_by(species) %>% summarize(mean_flipper=mean(bill_length_mm, na.rm=TRUE), n=n())
 penguins_clean %>% group_by(species) %>% summarize(mean_flipper=mean(bill_depth_mm, na.rm=TRUE), n=n())
 
-ggplot(penguins_clean, aes(x=species, y=body_mass_g)) + 
-  geom_jitter(col="darkgreen", width=.2, alpha=.6) + 
-  labs(x="Species", y="Body Mass", title="Body Mass of Species of Penguins") + theme_classic()
-  
+# function for comparing x and y
+num_cat <- function(x_value,y_value,x_name,y_name,title_, col_var, dataset) {
+  ggplot(dataset, aes(x={{x_value}}, y={{y_value}}, color= {{col_var}})) + 
+    geom_boxplot(width=.2, alpha=.3) + 
+    scale_color_manual(values=c(Adelie="skyblue", Chinstrap="purple", Gentoo="orange")) +
+    labs(x=x_name, y=y_name, title=title_) + theme_classic()
+}
+#species v numerical
+num_cat(species,bill_length_mm, x_name="Species", y_name="Bill Length (mm)", title_="Species by Bill Length", col_var=species, dataset=penguins_clean)
+num_cat(species, body_mass_g, x_name="Species", y_name="Body Mass (grams)", title_="Species by Body Mass", col_var=species,dataset=penguins_clean)
+num_cat(species, flipper_length_mm, x_name="Species", y_name="Flipper Length (mm)", title_="Species by Flipper Length", col_var=species, dataset=penguins_clean)
+num_cat(species,bill_depth_mm, x_name="Species", y_name="Bill Depth (mm)", title_="Species by Bill Depth", col_var=species, dataset=penguins_clean)
 
+# compare sex vs size cs species or island vs size vs species 2 cat vs 1 num
+# shows specific differences between variables
+penguins_long<- penguins_clean|> pivot_longer(cols=c(bill_length_mm,bill_depth_mm), names_to="measure", values_to="value")
+ggplot(penguins_long, aes(x=species, y=value, fill=species))+ geom_boxplot() + facet_wrap(~ measure, scales="free_y")+ theme_classic()
+
+# displays more correlation between all three variables
+ggplot(penguins_clean, aes(x=bill_length_mm, y=bill_depth_mm, color= species)) + geom_point() + geom_smooth(method="lm", se = FALSE) + 
+  theme_classic()
+
+ggplot(penguins_clean, aes(x=bill_length_mm, y=bill_depth_mm, color=species)) + geom_point(size=1.05, alpha=.6) + 
+  scale_color_manual(values=c(Adelie="skyblue", Chinstrap="purple", Gentoo="orange")) + geom_smooth(method="lm", se = FALSE, color="red", alpha=.5) + 
+  facet_wrap(~ species)
+
+# compare sex vs body mass vs flipper length, or species vs bodymass vs sflipper length etc 1 cat vs 2 num
+
+# numerical vs numerical
 
 
