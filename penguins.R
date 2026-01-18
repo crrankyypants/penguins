@@ -23,8 +23,8 @@ mean(penguins_clean$body_mass_g)
 table(penguins_clean$sex)
 table(penguins_clean$species)
 table(penguins_clean$island)
-table(penguins_clean$species, penguins_clean$island)
-table(penguins_clean$species, penguins_clean$sex)
+table(penguins_clean$species, penguins_clean$island) # Does which island the Adelie species resides in affect their size?
+table(penguins_clean$species, penguins_clean$sex) 
 
 # species, sex compared to body mass
 
@@ -68,7 +68,98 @@ ggplot(penguins_clean, aes(x=bill_length_mm, y=bill_depth_mm, color=species)) + 
   facet_wrap(~ species)
 
 # compare sex vs body mass vs flipper length, or species vs bodymass vs sflipper length etc 1 cat vs 2 num
+ggplot(penguins_clean, aes(x=body_mass_g, y=flipper_length_mm, color=species)) + geom_point(size=1, alpha =.5) + 
+  scale_color_manual(values=c(Adelie="skyblue", Chinstrap="purple", Gentoo="orange")) +
+  facet_wrap(~ sex) + theme_minimal()
 
+# THIS IS BETTER
+ggplot(penguins_clean, aes(x=body_mass_g, y=flipper_length_mm, color=sex)) + geom_boxplot(size=1, alpha =.5) + 
+  scale_color_manual(values=c(male="skyblue", female="purple")) +
+  facet_wrap(~ species) + theme_dark()
 # numerical vs numerical
+
+
+# Adelie species only - noticed they are hte only apecies spread across all 3 islands
+adelie_df <- penguins_clean %>% filter(species == "Adelie")
+
+# distribution of bodymass clearly shows against each island
+ggplot(adelie_df, aes(x = body_mass_g)) +
+  geom_histogram(binwidth = 100, fill = "skyblue", color = "black") +
+  facet_wrap(~ island) +
+  theme_dark()
+
+# boxplot gives better understanding of how the distribution presents mathematically
+ggplot(adelie_df, aes(x=island, y=body_mass_g)) + geom_boxplot(fill="skyblue")  + theme_dark()
+
+
+# distribution of overall bodymass
+ggplot(adelie_df, aes(x=body_mass_g)) + geom_histogram(binwidth=100, fill="skyblue", color="black") + theme_dark()
+  #actual stats
+# by island stat
+adelie_df %>% group_by(island) %>% summarize(n =n(), mean_body_mass = mean(body_mass_g),
+                                             mean_flipper_length = mean(flipper_length_mm),
+                                             sd_body_mass = sd(body_mass_g),
+                                             iqr_body_mass = IQR(body_mass_g))
+# overall stat
+adelie_df %>% summarize(n =n(), mean_body_mass = mean(body_mass_g), 
+                        mean_flipper_length = mean(flipper_length_mm),
+                        sd_body_mass = sd(body_mass_g),
+                        iqr_body_mass = IQR(body_mass_g))
+
+### some quesitons about the data
+
+# Predict species based on body measurements
+# what are the major differences between thse species of penguins, which features are most prominent in certain penguins
+# How do penguins vary in size by the island
+# can we predict the size of the adelie species based on the island - this is sort of bad because of biological 
+# how do adielie penguins differ across islands
+
+
+#### TESTING
+# how do adielie penguins differ across islands
+# Hypothesis testing
+  # H0: Adelie bodymass mean is the same across all islands : mean(island1)=mean(island2)=mean(island3)
+  # H1: The Adelie bodymass mean differs on at least 1 island: 
+
+# permutation 
+#observed test stat
+obs_stat <- adelie_df %>% group_by(island) %>% summarize(mean_mass = mean(body_mass_g)) %>% pull(mean_mass) %>% var()
+# permuted test stat
+perm_df <- replicate(5000, {
+  sample_bm <- sample(adelie_df$body_mass_g)
+  data.frame(island = as.character(adelie_df$island), body_mass_g = as.numeric(sample_bm))
+}, simplify=FALSE)
+
+perm_var <- sapply(perm_df, function(x) {
+    x %>% 
+    group_by(island) %>%
+    summarize(mean_mass = mean(body_mass_g)) %>%
+    pull(mean_mass) %>%
+    var()
+})
+
+# verifying the variances were correct
+perm_var1 <- c()
+
+for(i in 1:ncol(perm_means)) {
+  x1 <- perm_means[1,i]
+  x2 <- perm_means[2,i]
+  x3 <- perm_means[3,i]
+  mean_i <- (x1 + x2 + x3) / 3
+  
+  var_i <- ((x1 - mean_i)^2 + (x2 - mean_i)^2 + (x3 - mean_i)^2) / (3 - 1)
+  perm_var1[i] <- var_i
+}
+
+
+p_value <- mean(perm_var >= obs_stat)
+# Based on this permutations test, the observed variance in mean body mass across the 3 islands was not unusual under the null hypothesis. 
+# island location has no significant effect on the bodymass of the Adelie species . the Pvalue was .98 indicating the observed differences in mean bodymass can occur due the random variation alone. 
+
+
+# using anova to check our permutations pvalue answer
+anova_model <- aov(body_mass_g ~ island, data = adelie_df)
+summary(anova_model) # pvalue is .995 and our permutations pvalue is .9958 very similar meaning our test was accurate. 
+
 
 
