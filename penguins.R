@@ -3,6 +3,8 @@ library(tidyverse)
 library(dplyr)
 library(readr)
 library(janitor)
+library(nnet)
+library(class)
 
 # Load Data
 penguins<-read.csv('penguins.csv')
@@ -12,8 +14,16 @@ head(penguins)
 
 penguins_clean <- penguins %>% drop_na(bill_length_mm,bill_depth_mm,flipper_length_mm, body_mass_g, sex) %>% filter(sex %in% c("female", "male"))
 
-# Basic Analysis and Visuals
-# means of al lnumerical variables
+# Adelie species only - noticed they are the only species spread across all 3 islands
+adelie_df <- penguins_clean %>% filter(species == "Adelie")
+
+# widen the data set to separate the 3 different islands for ML and modeling
+penguins_wider <- penguins_clean %>% mutate(value=1) %>%  pivot_wider(names_from=island, values_from=value, values_fill=0, names_prefix="island_")
+
+
+
+##### Statistics
+# means of all numerical variables
 mean(penguins_clean$bill_length_mm)
 mean(penguins_clean$bill_depth_mm)
 mean(penguins_clean$flipper_length_mm)
@@ -41,6 +51,8 @@ penguins_clean %>% group_by(species) %>% summarize(mean_flipper=mean(flipper_len
 penguins_clean %>% group_by(species) %>% summarize(mean_flipper=mean(bill_length_mm, na.rm=TRUE), n=n())
 penguins_clean %>% group_by(species) %>% summarize(mean_flipper=mean(bill_depth_mm, na.rm=TRUE), n=n())
 
+
+### Visuals
 # function for comparing x and y
 num_cat <- function(x_value,y_value,x_name,y_name,title_, col_var, dataset) {
   ggplot(dataset, aes(x={{x_value}}, y={{y_value}}, color= {{col_var}})) + 
@@ -78,9 +90,6 @@ ggplot(penguins_clean, aes(x=body_mass_g, y=flipper_length_mm, color=sex)) + geo
   facet_wrap(~ species) + theme_dark()
 # numerical vs numerical
 
-
-# Adelie species only - noticed they are hte only apecies spread across all 3 islands
-adelie_df <- penguins_clean %>% filter(species == "Adelie")
 
 # distribution of bodymass clearly shows against each island
 ggplot(adelie_df, aes(x = body_mass_g)) +
@@ -161,5 +170,32 @@ p_value <- mean(perm_var >= obs_stat)
 anova_model <- aov(body_mass_g ~ island, data = adelie_df)
 summary(anova_model) # pvalue is .995 and our permutations pvalue is .9958 very similar meaning our test was accurate. 
 
+### Modeling and ML
 
+model_logistic <- multinom(species ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g, data = penguins_clean)
+
+# train/test split
+set.seed(123)
+
+train_idx <- sample(nrow(penguins_clean), 0.7 * nrow(penguins_clean))
+train <- penguins_clean[train_idx,]
+test <- penguins_clean[-train_idx,]
+
+pred <- predict(model_logistic, test)
+mean(pred==test$species) # classification accuracy
+
+table(Predicted = pred, Actual = test$species)
+
+model_full <- multinom( species ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g + sex + island, data = test)
+pred1 <- predict(model_full, test)
+mean(pred1==test$species)
+
+
+# scale
+X_train <- scale(train[, c("bill_length_mm", "bill_depth_mm",
+                           "flipper_length_mm", "body_mass_g")])
+X_test  <- scale(test[, c("bill_length_mm", "bill_depth_mm",
+                          "flipper_length_mm", "body_mass_g")])
+knn_pred <- knn( train = X_train, test = X_test, cl = train$species, k = 5)
+mean(knn_pred == test$species)
 
